@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Performance Ratio Dashboard (รายวัน + รายเดือน)</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel='stylesheet' href='style.css'>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h2>📊 Performance Ratio Dashboard</h2>
+      <p>วิเคราะห์ประสิทธิภาพระบบโซลาร์เซลล์แบบรายวันและรายเดือน</p>
+    </header>
+
+    <main>
+      <div class="upload-section">
+        <div class="upload-card">
+          <label><span class="icon">📁</span>Upload Performance File</label>
+          <input type="file" id="excelFile" accept=".xlsx, .xls">
+          <div class="file-status" id="performanceStatus"></div>
+        </div>
+
+        <div class="upload-card">
+          <label><span class="icon">☀️</span>Upload Solar Database</label>
+          <input type="file" id="solarDBFile" accept=".xlsx, .xls">
+          <div class="file-status" id="solarDBStatus"></div>
+        </div>
+      </div>
+
+      <div class="filters-section">
+        <div id="filters">
+          <div class="filter-group">
+            <label>จังหวัด:</label>
+            <input list="provinceList" id="provinceInput" placeholder="พิมพ์ชื่อจังหวัด...">
+            <datalist id="provinceList"></datalist>
+          </div>
+
+          <div class="filter-group">
+            <label>อำเภอ:</label>
+            <input list="districtList" id="districtInput" placeholder="พิมพ์ชื่ออำเภอ...">
+            <datalist id="districtList"></datalist>
+          </div>
+
+          <div class="filter-group">
+            <label>ตำบล:</label>
+            <input list="tumbolList" id="tumbolInput" placeholder="พิมพ์ชื่อตำบล...">
+            <datalist id="tumbolList"></datalist>
+          </div>
+
+          <div class="filter-group">
+            <label for="monthSelect">เดือน:</label>
+            <select id="monthSelect">
+              <option value="">-- เลือกเดือน --</option>
+              <option value="0">มกราคม</option>
+              <option value="1">กุมภาพันธ์</option>
+              <option value="2">มีนาคม</option>
+              <option value="3">เมษายน</option>
+              <option value="4">พฤษภาคม</option>
+              <option value="5">มิถุนายน</option>
+              <option value="6">กรกฎาคม</option>
+              <option value="7">สิงหาคม</option>
+              <option value="8">กันยายน</option>
+              <option value="9">ตุลาคม</option>
+              <option value="10">พฤศจิกายน</option>
+              <option value="11">ธันวาคม</option>
+              <option value="all">ทั้งปี</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="calculate-btn">
+        <button id="calcBtn">
+          <span class="icon">📊</span>คำนวณ Performance Ratio
+        </button>
+      </div>
+
+      <div class="result-section">
+        <div id="hiResult" class="result-box">ค่า Hi (MJ/m²): -</div>
+      </div>
+
+      <div class="charts-section">
+        <div class="chart-container">
+          <canvas id="dailyChart" height="300"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="monthlyChart" height="300"></canvas>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+    let solarDB = [];
+    let dailyChart, monthlyChart;
+    let performanceData = [];
+
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    window.addEventListener("error", e => {
+      console.error("❌ Global JS Error:", e.message, e.filename, e.lineno);
+      alert("เกิดข้อผิดพลาดในสคริปต์: " + e.message);
+    });
+
+    // ===== LOAD SOLAR DB =====
+    document.getElementById("solarDBFile").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      console.log("📥 Loading solar DB:", file.name);
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = new Uint8Array(ev.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          solarDB = XLSX.utils.sheet_to_json(sheet);
+          console.log("✅ Solar DB loaded:", solarDB.length, "rows");
+          populateProvinceList();
+          document.getElementById("solarDBStatus").textContent = `✅ โหลดข้อมูล ${solarDB.length} แถวแล้ว`;
+          document.getElementById("solarDBStatus").classList.add("valid");
+        } catch (err) {
+          console.error("❌ Solar DB load error:", err);
+          alert("โหลดไฟล์ Solar DB ไม่สำเร็จ");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    // ===== PROVINCE/DISTRICT/TUMBOL =====
+    function populateProvinceList() {
+      const provinces = [...new Set(solarDB.map(r => r["Province"]))].sort();
+      document.getElementById("provinceList").innerHTML = provinces.map(p => `<option value="${p}">`).join('');
+      console.log("🗺 Provinces:", provinces.slice(0, 5), "...");
+    }
+
+    document.getElementById("provinceInput").addEventListener("input", e => {
+      const province = e.target.value;
+      const districts = [...new Set(solarDB.filter(r => r["Province"] === province).map(r => r["District"]))].sort();
+      document.getElementById("districtList").innerHTML = districts.map(d => `<option value="${d}">`).join('');
+      console.log("🏙 Districts for", province, ":", districts.length);
+    });
+
+    document.getElementById("districtInput").addEventListener("input", e => {
+      const province = document.getElementById("provinceInput").value;
+      const district = e.target.value;
+      const tumbols = [...new Set(solarDB.filter(r => r["Province"] === province && r["District"] === district).map(r => r["Tumbol"]))].sort();
+      document.getElementById("tumbolList").innerHTML = tumbols.map(t => `<option value="${t}">`).join('');
+      console.log("🏘 Tumbols for", district, ":", tumbols.length);
+    });
+
+    // ===== FIND HI =====
+    function findHi(province, district, tumbol, monthIndex) {
+      console.log("🔍 findHi:", { province, district, tumbol, monthIndex });
+      const row = solarDB.find(r =>
+        r["Province"]?.trim().toLowerCase() === province.trim().toLowerCase() &&
+        r["District"]?.trim().toLowerCase() === district.trim().toLowerCase() &&
+        r["Tumbol"]?.trim().toLowerCase() === tumbol.trim().toLowerCase()
+      );
+      if (!row) {
+        console.warn("⚠️ No row found for location");
+        return null;
+      }
+
+      if (monthIndex === "all") {
+        let sum = 0;
+        for (let i = 0; i < 12; i++) sum += parseFloat(row[monthNames[i]] || 0);
+        return sum / 12;
+      }
+      return parseFloat(row[monthNames[monthIndex]]);
+    }
+
+    function updateHi() {
+      const p = document.getElementById("provinceInput").value;
+      const d = document.getElementById("districtInput").value;
+      const t = document.getElementById("tumbolInput").value;
+      const m = document.getElementById("monthSelect").value;
+      console.log("🔄 updateHi triggered", { p, d, t, m });
+      if (p && d && t && m !== "") {
+        const hi = findHi(p, d, t, m === "all" ? "all" : parseInt(m));
+        document.getElementById("hiResult").textContent =
+          hi ? `ค่า Hi: ${hi.toFixed(2)} MJ/m²` : "❌ ไม่พบข้อมูลในฐานข้อมูล";
+      }
+    }
+
+    // ===== PERFORMANCE FILE =====
+    document.getElementById("excelFile").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      console.log("📥 Loading performance file:", file.name);
+      const reader = new FileReader();
+      reader.onload = event => {
+        try {
+          const data = new Uint8Array(event.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          performanceData = XLSX.utils.sheet_to_json(firstSheet);
+          console.log("✅ Performance data loaded:", performanceData.length, "rows");
+          document.getElementById("performanceStatus").textContent = `✅ โหลดข้อมูล ${performanceData.length} แถวแล้ว`;
+          document.getElementById("performanceStatus").classList.add("valid");
+        } catch (err) {
+          console.error("❌ Performance load error:", err);
+          alert("โหลดไฟล์ Performance ไม่สำเร็จ");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    // ===== MAIN CALCULATION =====
+    document.getElementById("calcBtn").addEventListener("click", () => {
+      console.log("🚀 Calculate button clicked");
+      if (!performanceData.length) {
+        alert("กรุณาอัปโหลด Performance File ก่อน");
+        return;
+      }
+      drawPRCharts(performanceData);
+    });
+
+    function drawPRCharts(rows) {
+      console.log("📈 drawPRCharts with", rows.length, "rows");
+      try {
+        const dailyLabels = [];
+        const dailyPRs = [];
+        const monthlyData = {};
+        const p = document.getElementById("provinceInput").value;
+        const d = document.getElementById("districtInput").value;
+        const t = document.getElementById("tumbolInput").value;
+        const m = document.getElementById("monthSelect").value;
+
+        const Hi = findHi(p, d, t, m === "all" ? "all" : parseInt(m));
+        console.log("☀️ Hi value =", Hi);
+        if (!Hi) {
+          alert("ไม่พบค่า Hi ในฐานข้อมูล");
+          return;
+        }
+
+        rows.forEach((row, i) => {
+          const normalizedRow = {};
+          Object.keys(row).forEach(k => {
+            normalizedRow[k.trim().replace(/\s+/g, ' ')] = row[k];
+          });
+
+          const Po = parseFloat(normalizedRow["Po (kWp)"]);
+          const Egrid = parseFloat(normalizedRow["Egrid (kWh)"]);
+          const dateStr = normalizedRow["date"] || normalizedRow["วันที่"];
+
+          const Yf = Egrid / Po;
+          const Yr = Hi * 0.278;
+          const PR = (Yf / Yr) * 100;
+          dailyLabels.push(dateStr);
+          dailyPRs.push(PR);
+
+          const dObj = new Date(dateStr);
+          if (isNaN(dObj)) {
+            console.warn("⚠️ Invalid date:", dateStr);
+            return;
+          }
+          const monthKey = `${dObj.getFullYear()}-${dObj.getMonth() + 1}`;
+          if (!monthlyData[monthKey]) monthlyData[monthKey] = [];
+          monthlyData[monthKey].push(PR);
+        });
+
+        console.log("✅ Daily PR count:", dailyPRs.length);
+        const monthlyLabels = Object.keys(monthlyData).map(key => {
+          const [y, m] = key.split("-");
+          return `${monthNames[m - 1]} ${y}`;
+        });
+        const monthlyPRs = Object.values(monthlyData).map(arr =>
+          arr.reduce((a, b) => a + b, 0) / arr.length
+        );
+        console.log("✅ Monthly PRs:", monthlyPRs);
+
+        drawDailyChart(dailyLabels, dailyPRs);
+        drawMonthlyChart(monthlyLabels, monthlyPRs);
+      } catch (err) {
+        console.error("❌ Error in drawPRCharts:", err);
+        alert("Error in drawPRCharts: " + err.message);
+      }
+    }
+
+    // ===== CHARTS =====
+    function drawDailyChart(labels, data) {
+      console.log("📊 Drawing daily chart:", labels.length, "points");
+      const ctx = document.getElementById("dailyChart").getContext("2d");
+      if (dailyChart) dailyChart.destroy();
+      dailyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'PR รายวัน (%)',
+            data,
+            borderColor: '#00A859',
+            backgroundColor: 'rgba(0,168,89,0.15)',
+            fill: true,
+            tension: 0.35,
+            pointRadius: 3,
+            pointBackgroundColor: '#0072BC',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          plugins: {
+            title: { display: true, text: 'Performance Ratio รายวัน', font: { size: 16 } },
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'PR (%)' } },
+            x: { ticks: { maxRotation: 90, minRotation: 45 } }
+          }
+        }
+      });
+    }
+
+    function drawMonthlyChart(labels, data) {
+      console.log("📊 Drawing monthly chart:", labels.length, "bars");
+      const ctx = document.getElementById("monthlyChart").getContext("2d");
+      if (monthlyChart) monthlyChart.destroy();
+      const palette = [
+        '#00A859', '#0072BC', '#9BCB3B', '#78BE20', '#006838', '#29ABE2', '#8DC63F', '#00573D'
+      ];
+      const colors = data.map((_, i) => palette[i % palette.length]);
+      monthlyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'PR เฉลี่ยรายเดือน (%)',
+            data,
+            backgroundColor: colors,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          plugins: {
+            title: { display: true, text: 'Performance Ratio เฉลี่ยรายเดือน', font: { size: 16 } },
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'PR (%)' } }
+          }
+        }
+      });
+    }
+
+    document.getElementById("tumbolInput").addEventListener("input", updateHi);
+    document.getElementById("monthSelect").addEventListener("change", updateHi);
+  </script>
+
+</body>
+
+</html>
