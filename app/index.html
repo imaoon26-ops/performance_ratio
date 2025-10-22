@@ -166,17 +166,28 @@
         console.warn("⚠️ No row found for location");
         return null;
       }
-      let hiMJ;
-      if (monthIndex === "all") {
-        let sum = 0;
-        for (let i = 0; i < 12; i++) sum += parseFloat(row[monthNames[i]] || 0);
-      hiMJ = sum / 12;
-      }
-       else {
-    hiMJ = parseFloat(row[monthNames[monthIndex]]);
-  }
-       const hiKWh = hiMJ * 0.27778;
+       const monthNames = [
+          "January", "February", "March", "April", "May", "June",
+          "July", "August", "September", "October", "November", "December"
+        ];
+      let hiMJ = 0;
 
+      if (monthIndex === "all") {
+        hiMJ = parseFloat(row["Annually"] || row["Annual"] || 0);
+      } else {
+        const monthName = monthNames[monthIndex];
+        hiMJ = parseFloat(row[monthName] || 0);
+      }
+
+      if (isNaN(hiMJ) || hiMJ <= 0) {
+        console.warn("⚠️ Invalid Hi value from DB:", hiMJ);
+        return null;
+      }
+
+  
+      const hiKWh = hiMJ * 0.27778;
+
+      console.log(`☀️ Hi (kWh/m²): ${hiKWh.toFixed(3)} from ${hiMJ} MJ/m²`);
       return hiKWh;
     }
     function updateHi() {
