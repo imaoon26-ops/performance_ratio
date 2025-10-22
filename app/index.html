@@ -158,10 +158,10 @@
     function findHi(province, district, tumbol, monthIndex) {
       console.log("🔍 findHi:", { province, district, tumbol, monthIndex });
       const row = solarDB.find(r =>
-        r["Province"]?.trim().toLowerCase() === province.trim().toLowerCase() &&
-        r["District"]?.trim().toLowerCase() === district.trim().toLowerCase() &&
-        r["Tumbol"]?.trim().toLowerCase() === tumbol.trim().toLowerCase()
-      );
+      (r["Province"]?.trim().toLowerCase() || r["จังหวัด"]?.trim().toLowerCase()) === province.trim().toLowerCase() &&
+      (r["District"]?.trim().toLowerCase() || r["อำเภอ"]?.trim().toLowerCase()) === district.trim().toLowerCase() &&
+      (r["Tumbol"]?.trim().toLowerCase() || r["ตำบล"]?.trim().toLowerCase()) === tumbol.trim().toLowerCase()
+    );
       if (!row) {
         console.warn("⚠️ No row found for location");
         return null;
@@ -250,7 +250,7 @@
           const dateStr = normalizedRow["date"] || normalizedRow["วันที่"];
 
           const Yf = Egrid / Po;
-          const Yr = Hi * 0.278;
+          const Yr = Hi;
           const PR = (Yf / Yr) * 100;
           dailyLabels.push(dateStr);
           dailyPRs.push(PR);
