@@ -174,30 +174,32 @@
       return null;
     }
 
-    const monthNames = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
-    ];
+    const monthMap = {
+  0: ["January", "มกราคม", "Jan"],
+  1: ["February", "กุมภาพันธ์", "Feb"],
+  2: ["March", "มีนาคม", "Mar"],
+  3: ["April", "เมษายน", "Apr"],
+  4: ["May", "พฤษภาคม"],
+  5: ["June", "มิถุนายน", "Jun"],
+  6: ["July", "กรกฎาคม", "Jul"],
+  7: ["August", "สิงหาคม", "Aug"],
+  8: ["September", "กันยายน", "Sep"],
+  9: ["October", "ตุลาคม", "Oct"],
+  10: ["November", "พฤศจิกายน", "Nov"],
+  11: ["December", "ธันวาคม", "Dec"]
+};
 
-    let hiMJ = 0;
-
-    if (monthIndex === "all") {
-      hiMJ = parseFloat(
-        row["Annually"] ||
-        row["Anually"] ||
-        row["Annual"] ||
-        row["Annualy"] ||
-        0);
-    } else {
-      const monthName = monthNames[parseInt(monthIndex)];
-      hiMJ = parseFloat(row[monthName] || 0);
+if (monthIndex === "all") {
+  hiMJ = parseFloat(row["Annually"] || row["Anually"] || row["Annual"] || row["Annualy"] || 0);
+} else {
+  const keys = monthMap[parseInt(monthIndex)] || [];
+  for (const key of keys) {
+    if (row[key] !== undefined && row[key] !== "") {
+      hiMJ = parseFloat(row[key]);
+      break;
     }
-
-    if (isNaN(hiMJ) || hiMJ <= 0) {
-      console.warn("⚠️ Invalid Hi value from DB:", hiMJ, "in", row);
-      return null;
-    }
-
+  }
+}
    const hiKWh = hiMJ * 0.27778;
     console.log(`☀️ Found Hi = ${hiMJ} MJ/m² = ${hiKWh.toFixed(3)} kWh/m²`);
     return hiKWh;
