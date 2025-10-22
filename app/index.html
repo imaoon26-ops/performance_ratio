@@ -156,40 +156,48 @@
 
   
     function findHi(province, district, tumbol, monthIndex) {
-      console.log("🔍 findHi:", { province, district, tumbol, monthIndex });
-      const row = solarDB.find(r =>
-      (r["Province"]?.trim().toLowerCase() || r["จังหวัด"]?.trim().toLowerCase()) === province.trim().toLowerCase() &&
-      (r["District"]?.trim().toLowerCase() || r["อำเภอ"]?.trim().toLowerCase()) === district.trim().toLowerCase() &&
-      (r["Tumbol"]?.trim().toLowerCase() || r["ตำบล"]?.trim().toLowerCase()) === tumbol.trim().toLowerCase()
-    );
-      if (!row) {
-        console.warn("⚠️ No row found for location");
-        return null;
-      }
-       const monthNames = [
-          "January", "February", "March", "April", "May", "June",
-          "July", "August", "September", "October", "November", "December"
-        ];
-      let hiMJ = 0;
-
-      if (monthIndex === "all") {
-        hiMJ = parseFloat(row["Annually"] || row["Annual"] || 0);
-      } else {
-        const monthName = monthNames[monthIndex];
-        hiMJ = parseFloat(row[monthName] || 0);
-      }
-
-      if (isNaN(hiMJ) || hiMJ <= 0) {
-        console.warn("⚠️ Invalid Hi value from DB:", hiMJ);
-        return null;
-      }
-
-  
-      const hiKWh = hiMJ * 0.27778;
-
-      console.log(`☀️ Hi (kWh/m²): ${hiKWh.toFixed(3)} from ${hiMJ} MJ/m²`);
-      return hiKWh;
+      if (!solarDB || !solarDB.length) {
+      console.warn("⚠️ solarDB is empty");
+      return null;
     }
+
+    const clean = v => (v || "").toString().trim().toLowerCase();
+
+    const row = solarDB.find(r =>
+      clean(r["Province"]) === clean(province) &&
+      clean(r["District"]) === clean(district) &&
+      clean(r["Tumbol"]) === clean(tumbol)
+    );
+
+    if (!row) {
+      console.warn("❌ No matching row found for", province, district, tumbol);
+      return null;
+    }
+
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    let hiMJ = 0;
+
+    if (monthIndex === "all") {
+      hiMJ = parseFloat(row["Annually"] || row["Annual"] || 0);
+    } else {
+      const monthName = monthNames[parseInt(monthIndex)];
+      hiMJ = parseFloat(row[monthName] || 0);
+    }
+
+    if (isNaN(hiMJ) || hiMJ <= 0) {
+      console.warn("⚠️ Invalid Hi value from DB:", hiMJ, "in", row);
+      return null;
+    }
+
+    const hiKWh = hiMJ * 0.27778;
+    console.log(`☀️ Found Hi = ${hiMJ} MJ/m² = ${hiKWh.toFixed(3)} kWh/m²`);
+    return hiKWh;
+  }
+
     function updateHi() {
       const p = document.getElementById("provinceInput").value;
       const d = document.getElementById("districtInput").value;
