@@ -243,31 +243,76 @@
           return;
         }
 
-        rows.forEach((row, i) => {
-          const normalizedRow = {};
-          Object.keys(row).forEach(k => {
-            normalizedRow[k.trim().replace(/\s+/g, ' ')] = row[k];
-          });
+        // replace rows.forEach((row, i) => { ... }) with this block
+      rows.forEach((row, i) => {
+      const normalizedRow = {};
+      Object.keys(row).forEach(k => {
+      normalizedRow[k.trim().replace(/\s+/g, ' ')] = row[k];
+    });
 
-          const Po = parseFloat(normalizedRow["Po (kWp)"]);
-          const Egrid = parseFloat(normalizedRow["Egrid (kWh)"]);
-          const dateStr = normalizedRow["date"] || normalizedRow["วันที่"];
+      const Po = parseFloat(String(normalizedRow["Po (kWp)"] || normalizedRow["Po"] || "").replace(/,/g,''));
+      const Egrid = parseFloat(String(normalizedRow["Egrid (kWh)"] || normalizedRow["E-Grid (kWh)"] || normalizedRow["Egrid"] || "").replace(/,/g,''));
+      const dateStr = normalizedRow["date"] || normalizedRow["วันที่"];
+      if (!Po || !Egrid || !dateStr) {
+        console.warn("⚠️ Skip row (missing Po/Egrid/date):", i, normalizedRow);
+        return;
+      }
 
-          const Yf = Egrid / Po;
-          const Yr = Hi;
-          const PR = (Yf / Yr) * 100;
-          dailyLabels.push(dateStr);
-          dailyPRs.push(PR);
+      const dObj = new Date(dateStr);
+      if (isNaN(dObj)) {
+    
+      if (typeof dateStr === "string" && dateStr.includes("/")) {
+        const parts = dateStr.split("/");
+        const maybe = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      if (!isNaN(maybe)) {
+        dObj.setTime(maybe.getTime());
+      }
+    }
+  }
+  if (isNaN(dObj)) {
+    console.warn("⚠️ Invalid date, skip:", dateStr);
+    return;
+  }
 
-          const dObj = new Date(dateStr);
-          if (isNaN(dObj)) {
-            console.warn("⚠️ Invalid date:", dateStr);
-            return;
-          }
-          const monthKey = `${dObj.getFullYear()}-${dObj.getMonth() + 1}`;
-          if (!monthlyData[monthKey]) monthlyData[monthKey] = [];
-          monthlyData[monthKey].push(PR);
-        });
+  
+  let monthIndexForHi;
+  const userMonth = document.getElementById("monthSelect").value;
+  if (userMonth && userMonth !== "") {
+    if (userMonth === "all") {
+      monthIndexForHi = "all";
+    } else {
+      monthIndexForHi = parseInt(userMonth);
+    }
+  } else {
+    monthIndexForHi = dObj.getMonth(); // 0..11
+  }
+
+  // หา Hi สำหรับแถวนี้ (findHi จะคืนค่า kWh/m² ตามที่เราแก้แล้ว)
+  const Hi_this = findHi(
+    document.getElementById("provinceInput").value,
+    document.getElementById("districtInput").value,
+    document.getElementById("tumbolInput").value,
+    monthIndexForHi
+  );
+
+  if (!Hi_this || isNaN(Hi_this)) {
+    console.warn("⚠️ No Hi for row, skip:", i, "monthIndexForHi=", monthIndexForHi);
+    return;
+  }
+
+  const Yf = Egrid / Po;         
+  const Yr = Hi_this;         
+  const PR = (Yf / Yr) * 100;
+
+  console.log(`Row ${i}`, { date: dateStr, Po, Egrid, Hi_this, Yf: +Yf.toFixed(3), Yr: +Yr.toFixed(3), PR: +PR.toFixed(3) });
+
+  dailyLabels.push(dObj.toISOString().split("T")[0]);
+  dailyPRs.push(PR);
+
+  const monthKey = `${dObj.getFullYear()}-${dObj.getMonth() + 1}`;
+  if (!monthlyData[monthKey]) monthlyData[monthKey] = [];
+  monthlyData[monthKey].push(PR);
+});
 
         console.log("✅ Daily PR count:", dailyPRs.length);
         const monthlyLabels = Object.keys(monthlyData).map(key => {
