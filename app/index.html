@@ -174,37 +174,49 @@
       return null;
     }
 
-    const monthMap = {
-  0: ["January", "มกราคม", "Jan"],
-  1: ["February", "กุมภาพันธ์", "Feb"],
-  2: ["March", "มีนาคม", "Mar"],
-  3: ["April", "เมษายน", "Apr"],
-  4: ["May", "พฤษภาคม"],
-  5: ["June", "มิถุนายน", "Jun"],
-  6: ["July", "กรกฎาคม", "Jul"],
-  7: ["August", "สิงหาคม", "Aug"],
-  8: ["September", "กันยายน", "Sep"],
-  9: ["October", "ตุลาคม", "Oct"],
-  10: ["November", "พฤศจิกายน", "Nov"],
-  11: ["December", "ธันวาคม", "Dec"]
-};
+      const monthMap = {
+        0: ["January", "มกราคม", "Jan"],
+        1: ["February", "กุมภาพันธ์", "Feb"],
+        2: ["March", "มีนาคม", "Mar"],
+        3: ["April", "เมษายน", "Apr"],
+        4: ["May", "พฤษภาคม"],
+        5: ["June", "มิถุนายน", "Jun"],
+        6: ["July", "กรกฎาคม", "Jul"],
+        7: ["August", "สิงหาคม", "Aug"],
+        8: ["September", "กันยายน", "Sep"],
+        9: ["October", "ตุลาคม", "Oct"],
+        10: ["November", "พฤศจิกายน", "Nov"],
+        11: ["December", "ธันวาคม", "Dec"]
+      };
 
-if (monthIndex === "all") {
-  hiMJ = parseFloat(row["Annually"] || row["Anually"] || row["Annual"] || row["Annualy"] || 0);
-} else {
-  const keys = monthMap[parseInt(monthIndex)] || [];
-  for (const key of keys) {
-    if (row[key] !== undefined && row[key] !== "") {
-      hiMJ = parseFloat(row[key]);
-      break;
+      let hiMJ = 0;
+        if (monthIndex === "all") {
+          hiMJ = parseFloat(
+            row["Annually"] || row["Annual"] || row["Anually"] || row["Annualy"] || 0
+          );
+        } else {
+          const keys = monthMap[parseInt(monthIndex)] || [];
+          for (const key of Object.keys(row)) {
+            const cleanKey = key.trim();
+          for (const m of keys) {
+        if (cleanKey.toLowerCase().includes(m.toLowerCase())) {
+          hiMJ = parseFloat(row[key]);
+          break;
+        }
+      }
+      if (hiMJ) break;
     }
   }
-}
-   const hiKWh = hiMJ * 0.27778;
-    console.log(`☀️ Found Hi = ${hiMJ} MJ/m² = ${hiKWh.toFixed(3)} kWh/m²`);
-    return hiKWh;
+
+  if (!hiMJ || isNaN(hiMJ)) {
+    console.warn("⚠️ No valid Hi found for month:", monthIndex);
+    return null;
   }
 
+  const hiKWh = hiMJ * 0.27778;
+  console.log(`☀️ Found Hi = ${hiMJ} MJ/m² = ${hiKWh.toFixed(6)} kWh/m²`);
+  return hiKWh;
+}
 
     function updateHi() {
       const p = document.getElementById("provinceInput").value;
