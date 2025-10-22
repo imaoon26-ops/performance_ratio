@@ -154,7 +154,7 @@
       console.log("🏘 Tumbols for", district, ":", tumbols.length);
     });
 
-    // ===== FIND HI =====
+  
     function findHi(province, district, tumbol, monthIndex) {
       console.log("🔍 findHi:", { province, district, tumbol, monthIndex });
       const row = solarDB.find(r =>
@@ -166,15 +166,19 @@
         console.warn("⚠️ No row found for location");
         return null;
       }
-
+      let hiMJ;
       if (monthIndex === "all") {
         let sum = 0;
         for (let i = 0; i < 12; i++) sum += parseFloat(row[monthNames[i]] || 0);
-        return sum / 12;
+      hiMJ = sum / 12;
       }
-      return parseFloat(row[monthNames[monthIndex]]);
-    }
+       else {
+    hiMJ = parseFloat(row[monthNames[monthIndex]]);
+  }
+       const hiKWh = hiMJ * 0.27778;
 
+      return hiKWh;
+    }
     function updateHi() {
       const p = document.getElementById("provinceInput").value;
       const d = document.getElementById("districtInput").value;
@@ -188,7 +192,7 @@
       }
     }
 
-    // ===== PERFORMANCE FILE =====
+   
     document.getElementById("excelFile").addEventListener("change", e => {
       const file = e.target.files[0];
       if (!file) return;
