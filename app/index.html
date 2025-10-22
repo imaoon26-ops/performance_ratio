@@ -132,7 +132,7 @@
       reader.readAsArrayBuffer(file);
     });
 
-    // ===== PROVINCE/DISTRICT/TUMBOL =====
+    
     function populateProvinceList() {
       const provinces = [...new Set(solarDB.map(r => r["Province"]))].sort();
       document.getElementById("provinceList").innerHTML = provinces.map(p => `<option value="${p}">`).join('');
@@ -155,51 +155,60 @@
     });
 
   
-    function findHi(province, district, tumbol, monthIndex) {
-     if (!solarDB || !solarDB.length) {
-      console.warn("⚠️ solarDB is empty");
-      return null;
-    }
+function findHi(province, district, tumbol, monthIndex) {
+  if (!solarDB || !solarDB.length) {
+    console.warn("⚠️ solarDB is empty");
+    return null;
+  }
 
-    const clean = v => (v || "").toString().trim().toLowerCase();
+  const clean = v => (v || "").toString().trim().toLowerCase();
 
-    const row = solarDB.find(r =>
-      clean(r["Province"]) === clean(province) &&
-      clean(r["District"]) === clean(district) &&
-      clean(r["Tumbol"]) === clean(tumbol)
+  const row = solarDB.find(r =>
+    clean(r["Province"]) === clean(province) &&
+    clean(r["District"]) === clean(district) &&
+    clean(r["Tumbol"]) === clean(tumbol)
+  );
+
+  if (!row) {
+    console.warn("❌ No matching row found for", province, district, tumbol);
+    return null;
+  }
+
+  const monthMap = {
+    0: ["january", "มกราคม", "jan"],
+    1: ["february", "กุมภาพันธ์", "feb"],
+    2: ["march", "มีนาคม", "mar"],
+    3: ["april", "เมษายน", "apr"],
+    4: ["may", "พฤษภาคม"],
+    5: ["june", "มิถุนายน", "jun"],
+    6: ["july", "กรกฎาคม", "jul"],
+    7: ["august", "สิงหาคม", "aug"],
+    8: ["september", "กันยายน", "sep"],
+    9: ["october", "ตุลาคม", "oct"],
+    10: ["november", "พฤศจิกายน", "nov"],
+    11: ["december", "ธันวาคม", "dec"]
+  };
+
+  let hiMJ = null;
+  let matchedKey = "";
+
+  if (monthIndex === "all") {
+    hiMJ = parseFloat(
+      row["Annually"] || row["Annual"] || row["Anually"] || row["Annualy"] || 0
     );
+    matchedKey = "Annual";
+  } else {
+    const possibleKeys = monthMap[parseInt(monthIndex)] || [];
+    const keysInRow = Object.keys(row);
 
-    if (!row) {
-      console.warn("❌ No matching row found for", province, district, tumbol);
-      return null;
-    }
+    console.log(`🔍 [DEBUG] Searching for monthIndex=${monthIndex} →`, possibleKeys);
+    console.log(`🗝 Available keys in this row:`, keysInRow);
 
-      const monthMap = {
-        0: ["January", "มกราคม", "Jan"],
-        1: ["February", "กุมภาพันธ์", "Feb"],
-        2: ["March", "มีนาคม", "Mar"],
-        3: ["April", "เมษายน", "Apr"],
-        4: ["May", "พฤษภาคม"],
-        5: ["June", "มิถุนายน", "Jun"],
-        6: ["July", "กรกฎาคม", "Jul"],
-        7: ["August", "สิงหาคม", "Aug"],
-        8: ["September", "กันยายน", "Sep"],
-        9: ["October", "ตุลาคม", "Oct"],
-        10: ["November", "พฤศจิกายน", "Nov"],
-        11: ["December", "ธันวาคม", "Dec"]
-      };
-
-      let hiMJ = 0;
-        if (monthIndex === "all") {
-          hiMJ = parseFloat(
-            row["Annually"] || row["Annual"] || row["Anually"] || row["Annualy"] || 0
-          );
-        } else {
-          const keys = monthMap[parseInt(monthIndex)] || [];
-          for (const key of Object.keys(row)) {
-            const cleanKey = key.trim();
-          for (const m of keys) {
-        if (cleanKey.toLowerCase().includes(m.toLowerCase())) {
+    for (const key of keysInRow) {
+      const cleanKey = key.trim().toLowerCase();
+      for (const target of possibleKeys) {
+        if (cleanKey.includes(target.toLowerCase())) {
+          matchedKey = key;
           hiMJ = parseFloat(row[key]);
           break;
         }
@@ -214,7 +223,7 @@
   }
 
   const hiKWh = hiMJ * 0.27778;
-  console.log(`☀️ Found Hi = ${hiMJ} MJ/m² = ${hiKWh.toFixed(6)} kWh/m²`);
+  console.log(`☀️ Found Hi from column "${matchedKey}" = ${hiMJ} MJ/m² → ${hiKWh.toFixed(6)} kWh/m²`);
   return hiKWh;
 }
 
