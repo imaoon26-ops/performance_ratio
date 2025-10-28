@@ -222,22 +222,18 @@ function findHi(province, district, tumbol, monthIndex) {
     return null;
   }
 
-    // [FIXED] ลบการคูณ daysInMonth ออก เพื่อให้ได้ค่าเฉลี่ยรายวัน (Yr)
-    // const daysInMonth = monthIndex === "all"
-    // ? 365
-    // : new Date(2025, parseInt(monthIndex) + 1, 0).getDate();
 
-    const correction = 1;
+    const correction = 1.0;
     
    
-    const hiKWh = hiMJ * 0.27778 * correction;
+    const hiKWh = hiMJ * 0.27777778 * correction;
 
    
     console.log(`☀️ Found Hi from "${matchedKey}" = ${hiMJ} MJ/m²/day × 0.27778 × ${correction} = ${hiKWh.toFixed(2)} kWh/m²/day`);
     return hiKWh;
 }
 
-    // ===== [FIXED] แก้ไขป้ายกำกับหน่วย =====
+    
     function updateHi() {
       const p = document.getElementById("provinceInput").value;
       const d = document.getElementById("districtInput").value;
@@ -275,7 +271,7 @@ function findHi(province, district, tumbol, monthIndex) {
     });
 
     
-    // ===== [FIXED] แก้ไข logic การกรองข้อมูล =====
+   
     document.getElementById("calcBtn").addEventListener("click", () => {
       console.log("🚀 Calculate button clicked");
       if (!performanceData.length) {
@@ -284,27 +280,23 @@ function findHi(province, district, tumbol, monthIndex) {
       }
       const selectedMonth = document.getElementById("monthSelect").value;
       
-      // [FIXED] ลบการกรองข้อมูลตรงนี้
-      // เราจะส่งข้อมูลทั้งหมด (performanceData) ไปให้ drawPRCharts
-      // และส่ง selectedMonth เพื่อให้ drawPRCharts กรองข้อมูลสำหรับกราฟรายวันเอง
-
-      // [FIXED] ส่ง performanceData (ข้อมูลทั้งหมด) และ selectedMonth
+     
       drawPRCharts(performanceData, selectedMonth);
       });
 
-    // ===== [FIXED] แก้ไข logic การประมวลผลและกรองข้อมูล =====
+    
     function drawPRCharts(allRows, selectedMonth) {
       console.log("📈 drawPRCharts with", allRows.length, "rows", "for month", selectedMonth);
       try {
         const dailyLabels = [];
         const dailyPRs = [];
-        const monthlyData = {}; // สำหรับเก็บ PR รายวันของแต่ละเดือน
+        const monthlyData = {}; 
 
         const p = document.getElementById("provinceInput").value;
         const d = document.getElementById("districtInput").value;
         const t = document.getElementById("tumbolInput").value;
 
-        // สร้าง Hi Cache (ตอนนี้จะเก็บค่า Hi เฉลี่ยรายวัน kWH/m²/day)
+        
         const hiCache = {};
         for (let m = 0; m < 12; m++) {
           const hiVal = findHi(p, d, t, m);
@@ -312,9 +304,7 @@ function findHi(province, district, tumbol, monthIndex) {
         }
         console.log("☀️ Hi Cache (Daily Yr):", hiCache);
 
-        // [FIXED] ลบการกรองซ้ำซ้อน
-        // เราจะวนลูปข้อมูลทั้งหมด (allRows)
-
+        
         allRows.forEach((row, i) => {
           const normalizedRow = {};
           Object.keys(row).forEach(k => {
