@@ -46,12 +46,15 @@ main {
 
 
 .upload-section {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
+  align-items: center;     
+  justify-content: center; 
   gap: 30px;
-  margin-bottom: 40px;
+  margin: 40px auto;       
+  width: 100%;
+  max-width: 600px;        
 }
-
 .upload-card {
   background: #f8f9fa;
   padding: 25px;
