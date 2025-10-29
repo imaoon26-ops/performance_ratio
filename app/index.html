@@ -232,18 +232,17 @@
             // ? 365
             // : new Date(2025, parseInt(monthIndex) + 1, 0).getDate();
 
-            const correction = 1.08; // ปรับ calibrate ตามพื้นที่จริง
+            const correction = 1; // ปรับ calibrate ตามพื้นที่จริง
 
-            // [FIXED] คำนวณเป็น kWh/m²/day
-            const hiKWh = hiMJ * 0.27778 * correction;
+            
+            const hiKWh = hiMJ * 0.2777778 * correction;
 
-            // [FIXED] แก้ไข log
-            //     console.log(`☀️ Found Hi from "${matchedKey}" = ${hiMJ} MJ/m²/day × 0.27778 × ${correction} = ${hiKWh.toFixed(2)} kWh/m²/day`);
+            
             console.log(`[DEBUG] hiMJ=${hiMJ}, correction=${correction}, hiKWh=${hiMJ * 0.27778 * correction}`);
             return hiKWh;
         }
 
-        // ===== [FIXED] แก้ไขป้ายกำกับหน่วย =====
+        
         function updateHi() {
             const p = document.getElementById("provinceInput").value;
             const d = document.getElementById("districtInput").value;
