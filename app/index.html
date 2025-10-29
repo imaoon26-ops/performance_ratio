@@ -227,18 +227,13 @@
                 return null;
             }
 
-            // [FIXED] ลบการคูณ daysInMonth ออก เพื่อให้ได้ค่าเฉลี่ยรายวัน (Yr)
-            // const daysInMonth = monthIndex === "all"
-            // ? 365
-            // : new Date(2025, parseInt(monthIndex) + 1, 0).getDate();
-
-            const correction = 1; // ปรับ calibrate ตามพื้นที่จริง
+          
+           
+            
+            const hiKWh = hiMJ * 0.2777778 ;
 
             
-            const hiKWh = hiMJ * 0.2777778 * correction;
-
-            
-            console.log(`[DEBUG] hiMJ=${hiMJ}, correction=${correction}, hiKWh=${hiMJ * 0.27778 * correction}`);
+            console.log(`[DEBUG] hiMJ=${hiMJ}, hiKWh=${hikWh`);
             return hiKWh;
         }
 
